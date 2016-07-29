@@ -1,12 +1,21 @@
 # azure-blob-container-download
 
-> Downloads blobs from an Azure container.
+> Download blobs from an Azure container.
 
 [![npm version][npm-image]][npm-url]
 [![GitHub tag][github-tag-image]][github-tag-url]
 [![License][license-image]][license-url]
 
-## Installation
+A simple, cross-platform tool to bulk-download blobs from an [Azure storage container](https://azure.microsoft.com/en-us/documentation/services/storage/).
+
+It differs from existing tools by being simple and supporting:
+
+- [AzCopy](https://azure.microsoft.com/en-us/documentation/articles/storage-use-azcopy/): Cross-platform use
+- [Azure CLI](https://azure.microsoft.com/en-us/documentation/articles/storage-azure-cli/): Bulk-download of blobs
+- [Azure PowerShell](https://azure.microsoft.com/en-us/documentation/articles/storage-powershell-guide-full/): Cross-platform use
+- [Azure Portal](https://azure.microsoft.com/en-us/features/azure-portal/): Bulk-download of blobs
+
+## Install
 
 ```shell
 npm install --global azure-blob-container-download
@@ -21,7 +30,7 @@ Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
 
-Downloads blobs from an Azure container.
+Download blobs from an Azure container.
 https://github.com/DavidAnson/azure-blob-container-download
 ```
 
@@ -29,7 +38,7 @@ https://github.com/DavidAnson/azure-blob-container-download
 
 ...
 
-## Release History
+## History
 
 - 0.1.0 - Initial release.
 

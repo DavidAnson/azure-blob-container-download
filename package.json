@@ -1,6 +1,6 @@
 {
   "name": "azure-blob-container-download",
-  "description": "Downloads blobs from an Azure container.",
+  "description": "Download blobs from an Azure container.",
   "version": "0.1.0",
   "homepage": "https://github.com/DavidAnson/azure-blob-container-download",
   "author": "David Anson (https://dlaa.me/)",
