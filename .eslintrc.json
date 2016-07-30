@@ -202,7 +202,7 @@
         "quote-props": "error",
         "quotes": "error",
         "radix": "error",
-        "require-jsdoc": "error",
+        "require-jsdoc": "off",
         "require-yield": "error",
         "rest-spread-spacing": "error",
         "semi": "error",

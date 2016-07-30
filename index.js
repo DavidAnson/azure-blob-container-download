@@ -10,6 +10,8 @@ const pify = require("pify");
 const yargs = require("yargs");
 const packageJson = require("./package.json");
 
+const mkdir = pify(fs.mkdir);
+const stat = pify(fs.stat);
 const name = Object.keys(packageJson.bin)[0];
 const options = yargs.
   usage(`Usage: ${name} [options]`).
@@ -31,17 +33,16 @@ const options = yargs.
   strict().
   argv;
 
-const indent = "  ";
-const blobService = azureStorage.createBlobService(options.account, options.key);
-const listContainersSegmented = pify(blobService.listContainersSegmented.bind(blobService));
-const listBlobsSegmented = pify(blobService.listBlobsSegmented.bind(blobService));
-const getBlobToLocalFile = pify(blobService.getBlobToLocalFile.bind(blobService));
-const mkdir = pify(fs.mkdir);
-const stat = pify(fs.stat);
+const sanitize = function sanitize (str) {
+  return str.replace(/[\/\\]/g, "-");
+};
 
+let blobService = null;
 Promise.resolve().
   then(() => {
-    console.log(`Listing all containers in ${options.account}...`);
+    blobService = azureStorage.createBlobService(options.account, options.key);
+    console.log(`Listing containers in ${options.account}...`);
+    const listContainersSegmented = pify(blobService.listContainersSegmented.bind(blobService));
     return listContainersSegmented(null);
   }).
   then((listContainerResult) => {
@@ -50,12 +51,10 @@ Promise.resolve().
     });
   }).
   then((containerNames) => {
-    containerNames.forEach((containerName) => {
-      console.log(`${indent}${containerName}`);
-    });
+    const listBlobsSegmented = pify(blobService.listBlobsSegmented.bind(blobService));
     return containerNames.reduce((containerPromise, containerName) => {
-      return containerPromise.then(() => {
-        console.log(`Listing all blobs in ${containerName}...`);
+      return containerPromise.then((cumulativeBlobInfos) => {
+        console.log(`Listing blobs in ${containerName}...`);
         return stat(containerName).
           catch(() => {
             return mkdir(containerName);
@@ -64,22 +63,29 @@ Promise.resolve().
             return listBlobsSegmented(containerName, null).
               then((listBlobsResult) => {
                 return listBlobsResult.entries.map((blobResult) => {
-                  return blobResult.name;
+                  const blobName = blobResult.name;
+                  return {
+                    containerName,
+                    blobName
+                  };
                 });
-              }).
-              then((blobNames) => {
-                blobNames.forEach((blobName) => {
-                  console.log(`${indent}${blobName}`);
-                });
-                return blobNames.reduce((blobPromise, blobName) => {
-                  return blobPromise.then(() => {
-                    console.log(`Downloading blob ${containerName}/${blobName}...`);
-                    const fileName = path.join(containerName, blobName);
-                    return getBlobToLocalFile(containerName, blobName, fileName);
-                  });
-                }, Promise.resolve());
               });
+          }).
+          then((blobInfos) => {
+            return cumulativeBlobInfos.concat(blobInfos);
           });
+      });
+    }, Promise.resolve([]));
+  }).
+  then((blobInfos) => {
+    const getBlobToLocalFile = pify(blobService.getBlobToLocalFile.bind(blobService));
+    return blobInfos.reduce((blobPromise, blobInfo) => {
+      return blobPromise.then(() => {
+        const containerName = blobInfo.containerName;
+        const blobName = blobInfo.blobName;
+        console.log(`Downloading ${containerName} / ${blobName}...`);
+        const fileName = path.join(sanitize(containerName), sanitize(blobName));
+        return getBlobToLocalFile(containerName, blobName, fileName);
       });
     }, Promise.resolve());
   }).
