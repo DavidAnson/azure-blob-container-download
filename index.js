@@ -25,6 +25,11 @@ const options = yargs.
     "type": "string",
     "default": process.env.AZURE_STORAGE_ACCESS_KEY
   }).
+  option("snapshots", {
+    "describe": "True to include blob snapshots",
+    "type": "boolean",
+    "default": false
+  }).
   version().
   help().
   wrap(false).
@@ -32,9 +37,13 @@ const options = yargs.
   demand(0, 0).
   strict().
   argv;
+const listBlobsOptions = {};
+if (options.snapshots) {
+  listBlobsOptions.include = "snapshots";
+}
 
 const sanitize = function sanitize (str) {
-  return str.replace(/[\/\\]/g, "-");
+  return str.replace(/[\/\\:]/g, "-");
 };
 
 let blobService = null;
@@ -60,13 +69,15 @@ Promise.resolve().
   then((containerNames) => {
     const listBlobsSegmented = pify(blobService.listBlobsSegmented.bind(blobService));
     const listNextBlobs = function listNextBlobs (containerName, continuationToken, blobInfos) {
-      return listBlobsSegmented(containerName, continuationToken || null).
+      return listBlobsSegmented(containerName, continuationToken || null, listBlobsOptions).
         then((listBlobsResult) => {
           const nextBlobInfos = listBlobsResult.entries.map((blobResult) => {
             const blobName = blobResult.name;
+            const snapshot = blobResult.snapshot || "";
             return {
               containerName,
-              blobName
+              blobName,
+              snapshot
             };
           });
           const combinedBlobInfos = (blobInfos || []).concat(nextBlobInfos);
@@ -97,9 +108,17 @@ Promise.resolve().
       return blobPromise.then(() => {
         const containerName = blobInfo.containerName;
         const blobName = blobInfo.blobName;
-        console.log(`Downloading ${containerName} / ${blobName}...`);
-        const fileName = path.join(sanitize(containerName), sanitize(blobName));
-        return getBlobToLocalFile(containerName, blobName, fileName);
+        const snapshot = blobInfo.snapshot;
+        const combinedName = blobName + (snapshot
+          ? ` (${blobInfo.snapshot})`
+          : "");
+        console.log(`Downloading ${containerName} / ${combinedName}...`);
+        const fileName = path.join(sanitize(containerName), sanitize(combinedName));
+        const blobRequestOptions = {};
+        if (blobInfo.snapshot) {
+          blobRequestOptions.snapshotId = snapshot;
+        }
+        return getBlobToLocalFile(containerName, blobName, fileName, blobRequestOptions);
       });
     }, Promise.resolve());
   }).
