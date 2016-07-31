@@ -12,6 +12,7 @@ const packageJson = require("./package.json");
 
 const mkdir = pify(fs.mkdir);
 const stat = pify(fs.stat);
+const utimes = pify(fs.utimes);
 const name = Object.keys(packageJson.bin)[0];
 const options = yargs.
   usage(`Usage: ${name} [options]`).
@@ -73,10 +74,12 @@ Promise.resolve().
         then((listBlobsResult) => {
           const nextBlobInfos = listBlobsResult.entries.map((blobResult) => {
             const blobName = blobResult.name;
+            const lastModified = new Date(blobResult.lastModified);
             const snapshot = blobResult.snapshot || "";
             return {
               containerName,
               blobName,
+              lastModified,
               snapshot
             };
           });
@@ -118,7 +121,15 @@ Promise.resolve().
         if (blobInfo.snapshot) {
           blobRequestOptions.snapshotId = snapshot;
         }
-        return getBlobToLocalFile(containerName, blobName, fileName, blobRequestOptions);
+        return getBlobToLocalFile(containerName, blobName, fileName, blobRequestOptions).
+          then(() => {
+            // Ensure write is complete before changing modified date
+            return stat(fileName);
+          }).
+          then(() => {
+            const lastModified = blobInfo.lastModified;
+            return utimes(fileName, lastModified, lastModified);
+          });
       });
     }, Promise.resolve());
   }).
