@@ -43,15 +43,38 @@ Promise.resolve().
     blobService = azureStorage.createBlobService(options.account, options.key);
     console.log(`Listing containers in ${options.account}...`);
     const listContainersSegmented = pify(blobService.listContainersSegmented.bind(blobService));
-    return listContainersSegmented(null);
-  }).
-  then((listContainerResult) => {
-    return listContainerResult.entries.map((containerResult) => {
-      return containerResult.name;
-    });
+    const listNextContainers = function listNextContainers (continuationToken, containerNames) {
+      return listContainersSegmented(continuationToken || null).
+        then((listContainerResult) => {
+          const nextContainerNames = listContainerResult.entries.map((containerResult) => {
+            return containerResult.name;
+          });
+          const combinedContainerNames = (containerNames || []).concat(nextContainerNames);
+          return listContainerResult.continuationToken
+            ? listNextContainers(listContainerResult.continuationToken, combinedContainerNames)
+            : combinedContainerNames;
+        });
+    };
+    return listNextContainers();
   }).
   then((containerNames) => {
     const listBlobsSegmented = pify(blobService.listBlobsSegmented.bind(blobService));
+    const listNextBlobs = function listNextBlobs (containerName, continuationToken, blobInfos) {
+      return listBlobsSegmented(containerName, continuationToken || null).
+        then((listBlobsResult) => {
+          const nextBlobInfos = listBlobsResult.entries.map((blobResult) => {
+            const blobName = blobResult.name;
+            return {
+              containerName,
+              blobName
+            };
+          });
+          const combinedBlobInfos = (blobInfos || []).concat(nextBlobInfos);
+          return listBlobsResult.continuationToken
+            ? listNextBlobs(containerName, listBlobsResult.continuationToken, combinedBlobInfos)
+            : combinedBlobInfos;
+        });
+    };
     return containerNames.reduce((containerPromise, containerName) => {
       return containerPromise.then((cumulativeBlobInfos) => {
         console.log(`Listing blobs in ${containerName}...`);
@@ -60,16 +83,7 @@ Promise.resolve().
             return mkdir(containerName);
           }).
           then(() => {
-            return listBlobsSegmented(containerName, null).
-              then((listBlobsResult) => {
-                return listBlobsResult.entries.map((blobResult) => {
-                  const blobName = blobResult.name;
-                  return {
-                    containerName,
-                    blobName
-                  };
-                });
-              });
+            return listNextBlobs(containerName);
           }).
           then((blobInfos) => {
             return cumulativeBlobInfos.concat(blobInfos);
