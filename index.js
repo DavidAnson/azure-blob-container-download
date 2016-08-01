@@ -26,6 +26,16 @@ const options = yargs.
     "type": "string",
     "default": process.env.AZURE_STORAGE_ACCESS_KEY
   }).
+  option("containerPattern", {
+    "describe": "Regular expression filter for container names",
+    "type": "string",
+    "default": ".*"
+  }).
+  option("blobPattern", {
+    "describe": "Regular expression filter for blob names",
+    "type": "string",
+    "default": ".*"
+  }).
   option("snapshots", {
     "describe": "True to include blob snapshots",
     "type": "boolean",
@@ -38,6 +48,8 @@ const options = yargs.
   demand(0, 0).
   strict().
   argv;
+const containerRegExp = new RegExp(options.containerPattern);
+const blobRegExp = new RegExp(options.blobPattern);
 const listBlobsOptions = {};
 if (options.snapshots) {
   listBlobsOptions.include = "snapshots";
@@ -51,14 +63,18 @@ let blobService = null;
 Promise.resolve().
   then(() => {
     blobService = azureStorage.createBlobService(options.account, options.key);
-    console.log(`Listing containers in ${options.account}...`);
+    console.log(`Listing containers in ${options.account} matching /${containerRegExp.source}/...`);
     const listContainersSegmented = pify(blobService.listContainersSegmented.bind(blobService));
     const listNextContainers = function listNextContainers (continuationToken, containerNames) {
       return listContainersSegmented(continuationToken || null).
         then((listContainerResult) => {
-          const nextContainerNames = listContainerResult.entries.map((containerResult) => {
-            return containerResult.name;
-          });
+          const nextContainerNames = listContainerResult.entries.
+            map((containerResult) => {
+              return containerResult.name;
+            }).
+            filter((containerName) => {
+              return containerRegExp.test(containerName);
+            });
           const combinedContainerNames = (containerNames || []).concat(nextContainerNames);
           return listContainerResult.continuationToken
             ? listNextContainers(listContainerResult.continuationToken, combinedContainerNames)
@@ -91,7 +107,7 @@ Promise.resolve().
     };
     return containerNames.reduce((containerPromise, containerName) => {
       return containerPromise.then((cumulativeBlobInfos) => {
-        console.log(`Listing blobs in ${containerName}...`);
+        console.log(`Listing blobs in ${containerName} matching /${blobRegExp.source}/...`);
         return stat(containerName).
           catch(() => {
             return mkdir(containerName);
@@ -100,7 +116,10 @@ Promise.resolve().
             return listNextBlobs(containerName);
           }).
           then((blobInfos) => {
-            return cumulativeBlobInfos.concat(blobInfos);
+            return cumulativeBlobInfos.concat(blobInfos.
+              filter((blobInfo) => {
+                return blobRegExp.test(blobInfo.blobName);
+              }));
           });
       });
     }, Promise.resolve([]));

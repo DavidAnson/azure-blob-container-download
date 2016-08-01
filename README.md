@@ -27,11 +27,13 @@ npm install --global azure-blob-container-download
 Usage: abcd [options]
 
 Options:
-  --account    Storage account (or set AZURE_STORAGE_ACCOUNT)  [string]
-  --key        Storage access key (or set AZURE_STORAGE_ACCESS_KEY)  [string]
-  --snapshots  True to include blob snapshots  [boolean] [default: false]
-  --version    Show version number  [boolean]
-  --help       Show help  [boolean]
+  --account           Storage account (or set AZURE_STORAGE_ACCOUNT)  [string]
+  --key               Storage access key (or set AZURE_STORAGE_ACCESS_KEY)  [string]
+  --containerPattern  Regular expression filter for container names  [string] [default: ".*"]
+  --blobPattern       Regular expression filter for blob names  [string] [default: ".*"]
+  --snapshots         True to include blob snapshots  [boolean] [default: false]
+  --version           Show version number  [boolean]
+  --help              Show help  [boolean]
 
 Download blobs from an Azure container.
 https://github.com/DavidAnson/azure-blob-container-download
