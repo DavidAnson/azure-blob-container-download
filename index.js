@@ -28,18 +28,23 @@ const options = yargs.
   }).
   option("containerPattern", {
     "describe": "Regular expression filter for container names",
-    "type": "string",
-    "default": ".*"
+    "type": "string"
   }).
   option("blobPattern", {
     "describe": "Regular expression filter for blob names",
-    "type": "string",
-    "default": ".*"
+    "type": "string"
+  }).
+  option("startDate", {
+    "describe": "Starting date for blobs",
+    "type": "string"
+  }).
+  option("endDate", {
+    "describe": "Ending date for blobs",
+    "type": "string"
   }).
   option("snapshots", {
     "describe": "True to include blob snapshots",
-    "type": "boolean",
-    "default": false
+    "type": "boolean"
   }).
   version().
   help().
@@ -48,8 +53,19 @@ const options = yargs.
   demand(0, 0).
   strict().
   argv;
-const containerRegExp = new RegExp(options.containerPattern);
-const blobRegExp = new RegExp(options.blobPattern);
+const everythingRegExp = new RegExp();
+const containerRegExp = options.containerPattern
+  ? new RegExp(options.containerPattern)
+  : everythingRegExp;
+const blobRegExp = options.blobPattern
+  ? new RegExp(options.blobPattern)
+  : everythingRegExp;
+const startDate = options.startDate
+  ? new Date(options.startDate)
+  : null;
+const endDate = options.endDate
+  ? new Date(options.endDate)
+  : null;
 const listBlobsOptions = {};
 if (options.snapshots) {
   listBlobsOptions.include = "snapshots";
@@ -59,11 +75,21 @@ const sanitize = function sanitize (str) {
   return str.replace(/[\/\\:]/g, "-");
 };
 
+const startTime =
+  (startDate && !isNaN(startDate.valueOf()) && startDate.toUTCString()) ||
+  "[beginning of time]";
+const endTime =
+  (endDate && !isNaN(endDate.valueOf()) && endDate.toUTCString()) ||
+  "[end of time]";
+console.log(`Downloading blobs in ${options.account} from ${startTime} to ${endTime}.`);
 let blobService = null;
 Promise.resolve().
   then(() => {
     blobService = azureStorage.createBlobService(options.account, options.key);
-    console.log(`Listing containers in ${options.account} matching /${containerRegExp.source}/...`);
+    const containersMatching = containerRegExp === everythingRegExp
+      ? "[anything]"
+      : `/${containerRegExp.source}/`;
+    console.log(`Listing containers in ${options.account} matching ${containersMatching}...`);
     const listContainersSegmented = pify(blobService.listContainersSegmented.bind(blobService));
     const listNextContainers = function listNextContainers (continuationToken, containerNames) {
       return listContainersSegmented(continuationToken || null).
@@ -107,7 +133,10 @@ Promise.resolve().
     };
     return containerNames.reduce((containerPromise, containerName) => {
       return containerPromise.then((cumulativeBlobInfos) => {
-        console.log(`Listing blobs in ${containerName} matching /${blobRegExp.source}/...`);
+        const blobsMatching = blobRegExp === everythingRegExp
+          ? "[anything]"
+          : `/${blobRegExp.source}/`;
+        console.log(`Listing blobs in ${containerName} matching ${blobsMatching}...`);
         return stat(containerName).
           catch(() => {
             return mkdir(containerName);
@@ -118,7 +147,9 @@ Promise.resolve().
           then((blobInfos) => {
             return cumulativeBlobInfos.concat(blobInfos.
               filter((blobInfo) => {
-                return blobRegExp.test(blobInfo.blobName);
+                return blobRegExp.test(blobInfo.blobName) &&
+                  (!startDate || (startDate <= blobInfo.lastModified)) &&
+                  (!endDate || (blobInfo.lastModified <= endDate));
               }));
           });
       });
