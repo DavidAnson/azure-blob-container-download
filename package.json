@@ -14,7 +14,8 @@
   "license": "MIT",
   "main": "index.js",
   "bin": {
-    "abcd": "index.js"
+    "abcd": "index.js",
+    "azure-blob-container-download": "index.js"
   },
   "preferGlobal": true,
   "engines": {
