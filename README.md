@@ -63,13 +63,33 @@ Include [blob snapshots](https://azure.microsoft.com/en-us/documentation/article
 
     abcd --snapshots
 
+Filter by last modified date of each blob:
+
+    abcd --startDate 2016-02-13 --endDate 2016-08-04
+
 Filter by container name and/or blob name using [regular expressions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions):
 
     abcd --containerPattern container --blobPattern "blobs?"
 
-Filter by last modified date of each blob:
+**Note**: Some regular expression characters require escaping on the command line.
+The output from `azure-blob-container-download` shows when this happens.
 
-    abcd --startDate 2016-02-13 --endDate 2016-08-04
+For example (Windows):
+
+```text
+C:\>abcd --containerPattern ^text
+Downloading blobs in account from [beginning of time] to [end of time].
+Listing containers in account matching /text/...
+```
+
+The leading `^` character of the `--containerPattern` has been lost by the shell.
+It can be recovered by quoting the parameter:
+
+```text
+C:\>abcd --containerPattern "^text"
+Downloading blobs in account from [beginning of time] to [end of time].
+Listing containers in account matching /^text/...
+```
 
 ## History
 
