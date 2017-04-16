@@ -6,13 +6,13 @@
 [![GitHub tag][github-tag-image]][github-tag-url]
 [![License][license-image]][license-url]
 
-A simple, cross-platform tool to bulk-download blobs from an [Azure storage container](https://azure.microsoft.com/en-us/documentation/services/storage/).
+A simple, cross-platform tool to bulk-download blobs from an [Azure storage container](https://docs.microsoft.com/en-us/azure/storage/).
 
 Though limited in scope, it does some things official tools don't:
 
-- [AzCopy](https://azure.microsoft.com/en-us/documentation/articles/storage-use-azcopy/) is not cross-platform
-- [Azure CLI](https://azure.microsoft.com/en-us/documentation/articles/storage-azure-cli/) does not bulk-download
-- [Azure PowerShell](https://azure.microsoft.com/en-us/documentation/articles/storage-powershell-guide-full/) is not cross-platform
+- [AzCopy](https://docs.microsoft.com/en-us/azure/storage/storage-use-azcopy) is not cross-platform
+- [Azure CLI](https://docs.microsoft.com/en-us/azure/storage/storage-azure-cli) does not bulk-download
+- [Azure PowerShell](https://docs.microsoft.com/en-us/azure/storage/storage-powershell-guide-full) is not cross-platform
 - [Azure Portal](https://azure.microsoft.com/en-us/features/azure-portal/) does not bulk-download
 
 ## Install
@@ -59,7 +59,7 @@ Or set environment variables `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_K
 
     abcd
 
-Include [blob snapshots](https://azure.microsoft.com/en-us/documentation/articles/storage-blob-snapshots/):
+Include [blob snapshots](https://docs.microsoft.com/en-us/azure/storage/storage-blob-snapshots):
 
     abcd --snapshots
 
@@ -94,6 +94,7 @@ Listing containers in account matching /^text/...
 ## History
 
 - 0.1.0 - Initial release
+  - 0.1.1 - Patch for OS X
 
 [npm-image]: https://img.shields.io/npm/v/azure-blob-container-download.svg
 [npm-url]: https://www.npmjs.com/package/azure-blob-container-download
